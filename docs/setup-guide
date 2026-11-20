@@ -1,0 +1,55 @@
+# ESP32 Autonomous Delivery Robot Setup Guide
+
+This guide covers the hardware setup and first checks for the ESP32-based delivery robot. The control modes described here are the intended project behavior; verify them with the firmware and prototype before reporting test results.
+
+## Hardware used
+
+- ESP32 DevKit with WROOM-32
+- Two TB6612FNG dual motor-driver boards
+- Two encoder-equipped N20 motors and two standard N20 motors
+- HC-SR04 ultrasonic sensor and MPU6050 IMU
+- LED indicator
+- 12 V battery and two LM2596 buck converters
+
+## Power connections
+
+1. With the battery disconnected, adjust LM2596 #1 to **6 V**. This rail supplies the motor voltage inputs (`VM`) on both TB6612FNG boards.
+2. Adjust LM2596 #2 to **5 V**. This rail supplies the ESP32 DevKit `VIN`/`5V` input and the sensor power inputs.
+3. Connect each TB6612FNG logic input (`VCC`) to the ESP32 **3.3 V** output.
+4. Connect battery negative, both converter grounds, both driver grounds, ESP32 ground, and sensor grounds together.
+5. Check converter output voltage and polarity with a multimeter before attaching the ESP32, sensors, drivers, or motors. Do not connect the 12 V battery directly to the ESP32 or sensor power pins.
+
+## ESP32 pin map
+
+| Function | ESP32 pin | Connection / note |
+|---|---:|---|
+| Encoder-driver PWMA | GPIO 4 | Left encoder motor speed |
+| Encoder-driver PWMB | GPIO 27 | Right encoder motor speed |
+| Standard-driver PWMA | GPIO 16 | Left standard motor speed |
+| Standard-driver PWMB | GPIO 13 | Right standard motor speed |
+| Driver direction signals | GPIO 25, 26, 32, 33 | Match each signal to the firmware and wiring diagram |
+| TB6612FNG STBY | GPIO 23 | Standby control |
+| Left encoder A / B | GPIO 18 / 19 | Encoder outputs |
+| Right encoder A / B | GPIO 34 / 35 | Encoder outputs; GPIO 34 and 35 are input-only |
+| HC-SR04 TRIG | GPIO 5 | Trigger output |
+| HC-SR04 ECHO | GPIO 14 | Connect through a voltage divider before the ESP32 input |
+| LED indicator | GPIO 17 | Use a current-limiting resistor for a bare LED |
+| MPU6050 SDA / SCL | GPIO 21 / 22 | I²C data / clock |
+
+## Prepare and upload the firmware
+
+1. Install Arduino IDE and add Espressif ESP32 board support through Boards Manager.
+2. Open the robot sketch from the repository’s `firmware/esp32/` folder.
+3. Review the sketch’s `#include` lines and install any required external libraries. `Wire`, `WiFi`, and `WebServer` are provided by the ESP32 Arduino core; the MPU6050 library depends on the one selected by the sketch.
+4. Enter Wi-Fi details in the local configuration required by the firmware. Keep passwords and other credentials out of GitHub.
+5. Select the ESP32 Dev Module board and the connected serial port, then upload the sketch. Use the baud rate specified in the firmware when opening Serial Monitor.
+6. Connect to the robot’s web page using the Wi-Fi mode and address configured in the firmware. It may use an ESP32 access point or join an existing network; follow the sketch’s settings.
+
+## First power-on checks
+
+Keep the wheels raised for the first motor tests. Confirm that the robot stops when commanded, that each motor turns in the intended direction, and that encoder and MPU6050 readings change during movement. Then check the ultrasonic obstacle-pause behavior, route teaching/replay, destination LED, and return-to-base sequence. Record actual measurements and pass/fail results in `tests/test-results.csv`; leave results pending until tested.
+
+## Diagrams
+
+- [Robot operating flowchart](../diagrams/robot-flowchart.png)
+- [Power distribution diagram](../diagrams/power-distribution.png)

@@ -1,0 +1,60 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local editor and workspace settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+!.env.template
+*.local.env
+*.local.h
+
+# ESP32 / Arduino / PlatformIO build outputs
+.pio/
+/build/
+/dist/
+/out/
+/cmake-build-*/
+/firmware/**/build/
+/firmware/**/debug/
+*.o
+*.a
+*.elf
+*.hex
+*.bin
+*.map
+*.d
+*.sym
+*.out
+sdkconfig
+sdkconfig.old
+
+# Python and Node temporary dependencies or caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Temporary files and generated document-preview renders
+*.tmp
+*.bak
+*.swp
+*.swo
+~$*
+.task_artifacts/
+/flowchart_report_render/
+/report_render_after_edit/
+/report_render_styled/
+/report_render_styled_final/
+/template_render/

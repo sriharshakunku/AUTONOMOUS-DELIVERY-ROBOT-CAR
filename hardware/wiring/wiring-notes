@@ -1,0 +1,92 @@
+# Autonomous Delivery Robot Car — Wiring Notes
+
+This guide describes the project wiring for the ESP32 DevKit (WROOM-32), two TB6612FNG driver boards, four N20 motors, HC-SR04, MPU6050, LED, 12 V battery, and two LM2596 converters.
+
+Use the **GPIO number** in the tables below; it is not the ESP32 header position. Check the label printed on your specific DevKit and driver boards before connecting wires.
+
+## Read this before wiring
+
+- Disconnect the battery while wiring.
+- The battery is **12 V** and must feed the two LM2596 converter inputs. Do not connect 12 V directly to the ESP32, sensors, or either TB6612FNG supply pin (`VM` or `VCC`).
+- Set and measure the two converter outputs before connecting the electronics: one converter to **6 V** for the motor-driver `VM` pins, and one to **5 V** for the ESP32 board input and compatible sensor modules.
+- Join the battery negative, both converter grounds, both driver grounds, ESP32 ground, and sensor grounds. They must share a **common ground**.
+- ESP32 GPIO signals use **3.3 V logic**. Do not allow a 5 V signal to reach an ESP32 GPIO. In particular, the HC-SR04 `ECHO` line needs a voltage divider.
+- Motor ratings, battery capacity, converter current ratings, and voltage-divider resistor values were not provided. Confirm the motors are rated for the 6 V rail and that motor current is within the driver and converter limits. Check the labels and component documentation; do not assume those values.
+
+## Power wiring
+
+| From | Connect to | Required setting / check |
+|---|---|---|
+| 12 V battery positive | `IN+` on both LM2596 converters | Feed both converter inputs from the battery; observe polarity. |
+| 12 V battery negative | `IN-` on both LM2596 converters and the common ground | Join all grounds before connecting signal wires. |
+| LM2596 #1 `OUT+` | `VM` on both TB6612FNG boards | Adjust to **6 V** and verify with a multimeter before connecting the drivers. Confirm the motors are rated for 6 V. |
+| LM2596 #2 `OUT+` | ESP32 DevKit input labeled `5V` or `VIN` | Adjust to **5 V**. Use the actual label on the board; never put the 6 V motor rail here. |
+| ESP32 `3V3` | `VCC` logic supply on both TB6612FNG boards | This is the driver logic supply, separate from the 6 V `VM` motor supply. |
+| Common ground | ESP32 `GND`, both driver `GND` pins, sensor grounds, converter grounds, battery negative | Keep all grounds connected together. |
+
+For the sensor supply, power the HC-SR04 from the 5 V rail. The MPU6050 is often supplied on a breakout board; check that board's markings. Connect its `VCC` to 5 V only if that specific breakout accepts 5 V. Otherwise use 3.3 V. Keep its I2C logic at 3.3 V.
+
+## ESP32 signal wiring
+
+### Motor drivers and motors
+
+| ESP32 GPIO | Connect to | Function |
+|---|---|---|
+| GPIO4 | Encoder-motor driver `PWMA` | Left encoder-motor speed control |
+| GPIO27 | Encoder-motor driver `PWMB` | Right encoder-motor speed control |
+| GPIO16 | Standard-motor driver `PWMA` | Left standard-motor speed control |
+| GPIO13 | Standard-motor driver `PWMB` | Right standard-motor speed control |
+| GPIO23 | `STBY` on both TB6612FNG boards | Standby control for both drivers |
+| GPIO25, GPIO26, GPIO32, GPIO33 | TB6612FNG direction input signals | Four direction-control GPIOs; see the direction note below before wiring. |
+
+Connect each motor to the output pair for its driver channel (the board may label these `A01/A02` and `B01/B02`, or similar). Keep the left and right motors on the channels identified in the firmware. Do not connect a motor directly across the 6 V supply.
+
+> **Direction mapping needs confirmation:** The project pin list identifies GPIO25, GPIO26, GPIO32, and GPIO33 as direction-control pins, but does not identify which one goes to each `AIN1`, `AIN2`, `BIN1`, or `BIN2` input on each driver board. Confirm this using the existing firmware and the actual board wiring. Do not assume the four GPIOs map sequentially. Keep the motor supply disconnected until this mapping is confirmed.
+
+### Encoders
+
+| ESP32 GPIO | Encoder connection | Important note |
+|---|---|---|
+| GPIO18 | Left encoder channel A | Encoder signal must not exceed 3.3 V. |
+| GPIO19 | Left encoder channel B | Encoder signal must not exceed 3.3 V. |
+| GPIO34 | Right encoder channel A | Input-only pin; it has no internal pull-up. Add an external pull-up only if the encoder output requires one. |
+| GPIO35 | Right encoder channel B | Input-only pin; it has no internal pull-up. Add an external pull-up only if the encoder output requires one. |
+
+Connect encoder `VCC` and `GND` according to the encoder/motor module rating. Check whether the encoder outputs are push-pull or open-collector/open-drain, and ensure their signal voltage is safe for the ESP32 before powering them.
+
+### Sensors and indicator
+
+| ESP32 GPIO | Connect to | Wiring note |
+|---|---|---|
+| GPIO5 | HC-SR04 `TRIG` | GPIO5 is a boot-strapping pin on the classic ESP32. Check that the sensor circuit does not interfere with reliable startup. |
+| GPIO14 | HC-SR04 `ECHO` through a voltage divider | The divider must reduce the sensor's 5 V echo pulse to no more than 3.3 V at the ESP32. The resistor values are not specified in the project notes. |
+| GPIO21 | MPU6050 `SDA` | I2C data. Ensure the breakout's I2C pull-ups do not pull the line to 5 V. |
+| GPIO22 | MPU6050 `SCL` | I2C clock. Ensure the breakout's I2C pull-ups do not pull the line to 5 V. |
+| GPIO17 | LED control | If using a bare LED, include a suitable series current-limiting resistor. Its value is not specified. |
+
+## Connection order
+
+1. Leave the battery disconnected. Identify the battery polarity, converter input/output terminals, ESP32 board power label, driver pins, and sensor pins.
+2. Wire the battery to the two LM2596 **inputs** and join the grounds. Do not connect the downstream devices yet.
+3. Use a multimeter to adjust and confirm converter #1 at **6 V** and converter #2 at **5 V**. Check output polarity. Record the actual readings if needed for the project test log.
+4. With the battery disconnected again, wire the common ground, driver logic supply, ESP32 power input, and sensor supplies as described above.
+5. Wire the PWM, encoder, sensor, LED, and standby signals using the tables. Keep the TB6612FNG direction input wiring disconnected until its exact mapping is confirmed from firmware and the physical build.
+6. Recheck for reversed polarity, loose strands, shorts between adjacent pins, and accidental links between the 5 V and 6 V rails.
+7. For the first powered check, raise the wheels clear of the table and keep the motor rail disconnected until the driver direction mapping has been confirmed. Test one motor channel at a time and verify stop, forward, and reverse behavior before placing the robot on the floor.
+
+## Final wiring checklist
+
+- [ ] Battery positive feeds both LM2596 inputs; battery negative joins the common ground.
+- [ ] LM2596 #1 is set to 6 V and supplies only the driver `VM` motor rail.
+- [ ] LM2596 #2 is set to 5 V and supplies the ESP32 board input and only 5 V-compatible modules.
+- [ ] ESP32 `3V3` supplies TB6612FNG `VCC`; all system grounds are common.
+- [ ] HC-SR04 `ECHO` reaches GPIO14 through a divider; GPIO14 is not connected directly to the 5 V echo output.
+- [ ] Encoder outputs are at 3.3 V or less; any required external pull-ups are fitted, especially for GPIO34/35.
+- [ ] GPIO25/26/32/33 direction assignments match the firmware and actual driver wiring.
+- [ ] Motor polarity and left/right channel assignments are checked with the wheels raised.
+
+## Related project files
+
+- [ESP32 pin map](esp32-pin-map.csv)
+- [Hardware component list](component-list.csv)
+- [Power distribution diagram](../diagrams/power-distribution.svg)
